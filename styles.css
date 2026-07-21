@@ -9,6 +9,12 @@
   --text: #202124;
   --muted: #5f6368;
   --border: #dcdfe1;
+
+  /* Single accent color: a football-pitch green, used only for the page
+     title and the main action buttons (Start / New round / Give up). */
+  --accent: #2ecc71;
+  --accent-hover: #27ae60;
+  --accent-text: #0e2a1a; /* dark text keeps good contrast on the bright green */
 }
 
 * {
@@ -34,6 +40,7 @@ body {
 h1 {
   text-align: center;
   margin-bottom: 4px;
+  color: var(--accent);
 }
 
 .subtitle {
@@ -218,6 +225,20 @@ button {
   text-decoration: underline;
 }
 
+.nav-highlight-link {
+  display: block;
+  margin-bottom: 16px;
+  text-align: center;
+  color: var(--green);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-highlight-link:hover {
+  color: var(--green-dark);
+  text-decoration: underline;
+}
+
 .player-photo {
   display: block;
   width: 160px;
@@ -295,4 +316,23 @@ button {
   font-weight: 600;
   text-align: center;
   margin-top: 8px;
+}
+
+/* Accent-green main buttons: Start (both pages), New round (both pages),
+   Give up (Career Paths). Targeted by ID so other buttons (e.g. "Hide and
+   pass", "Reveal impostor(s)") keep their current look. */
+#start-game-btn,
+#start-round-btn,
+#new-round-btn,
+#give-up-btn {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+}
+
+#start-game-btn:hover,
+#start-round-btn:hover,
+#new-round-btn:hover,
+#give-up-btn:hover {
+  background: var(--accent-hover);
 }
