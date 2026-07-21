@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Career Paths</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <main id="app">
+    <a href="index.html" class="back-link">&larr; Back to Football Impostor</a>
+
+    <!-- SCREEN 1: pick a difficulty and start a round -->
+    <section id="start-screen" class="screen">
+      <h1>&#129517; Career Paths</h1>
+      <p class="subtitle">Guess the footballer from their club career!</p>
+
+      <div class="rules-box">
+        <p>Pick a difficulty and we'll reveal a mystery player's first couple
+          of clubs. Guess who it is before you run out of tries!</p>
+        <ul>
+          <li>Type a name to search, then tap it in the list to lock in your guess.</li>
+          <li>Every wrong guess reveals one more club in their career.</li>
+          <li>You get 5 guesses before the answer is revealed.</li>
+        </ul>
+      </div>
+
+      <div class="field">
+        <label for="difficulty-select">Difficulty</label>
+        <select id="difficulty-select">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+
+      <button id="start-round-btn" class="primary-btn">Start round</button>
+      <p id="start-message" class="start-message"></p>
+    </section>
+
+    <!-- SCREEN 2: the guessing round itself -->
+    <section id="game-screen" class="screen hidden">
+      <div class="card">
+        <p id="difficulty-label" class="pass-prompt"></p>
+
+        <!-- alt text + onerror (set in JS) make sure a broken photo URL
+             never shows an ugly broken-image icon -->
+        <img id="player-photo" class="player-photo blurred" alt="Mystery player" />
+
+        <ul id="career-list" class="career-list"></ul>
+
+        <div class="guess-wrap">
+          <input
+            type="text"
+            id="guess-input"
+            placeholder="Type a player name..."
+            autocomplete="off"
+          />
+          <div id="guess-dropdown" class="guess-dropdown hidden"></div>
+        </div>
+
+        <p id="guesses-left" class="guesses-left"></p>
+        <p id="feedback-message" class="feedback-message"></p>
+
+        <div id="answer-box" class="answer-display hidden">
+          <p>The answer was: <strong id="answer-name"></strong></p>
+        </div>
+
+        <button id="give-up-btn" class="secondary-btn">Give up</button>
+        <button id="new-round-btn" class="secondary-btn">New round</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Plain scripts (not modules) -- careerPlayers.js just declares a global
+       `careerPlayers` variable, and careerPaths.js below uses it directly. -->
+  <script src="js/careerPlayers.js"></script>
+  <script src="js/careerPaths.js"></script>
+</body>
+</html>
