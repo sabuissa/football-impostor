@@ -1,10 +1,22 @@
 // careerPaths.js
 // Game logic for the "Career Paths" guessing game.
 //
-// Player data (the list of footballers + their career paths) lives in
-// careerPlayers.js, which is loaded as a plain <script> tag BEFORE this file
-// in career-paths.html. That means the global `careerPlayers` variable it
-// declares is already available here -- we don't need to import anything.
+// This file deliberately reads from TWO separate, unrelated lists:
+//
+// 1. The ANSWER pool: careerPlayers.js (global `careerPlayers` variable,
+//    loaded as a plain <script> tag before this file). The mystery player
+//    for each round is ALWAYS chosen from here -- these are the ~11
+//    footballers with 4+ verified senior clubs.
+//
+// 2. The SEARCH pool: js/data.js's `players` list (the football-impostor
+//    game's ~200 names), imported read-only below. This is ONLY used to
+//    populate the search-as-you-type dropdown. If the dropdown searched the
+//    answer pool instead, it would double as an answer key -- typing any
+//    letter would instantly show you the small list of possible answers.
+//    Searching a much bigger, unrelated name list keeps the dropdown useful
+//    without giving the game away. We never modify data.js -- just import
+//    its exported list, same as main.js already does for the impostor game.
+import { players as allFootballerNames } from "./data.js";
 
 // ---------------------------------------------------------------------------
 // Grab references to all the HTML elements we'll need to read from / write to.
@@ -140,7 +152,9 @@ function updateGuessesLeftText() {
 }
 
 // ---------------------------------------------------------------------------
-// Search-as-you-type dropdown: shows matching player names as the user types.
+// Search-as-you-type dropdown: shows matching names from the LARGE search
+// pool (js/data.js), not the small answer pool -- see the note at the top
+// of this file for why that separation matters.
 // ---------------------------------------------------------------------------
 
 guessInput.addEventListener("input", () => {
@@ -152,8 +166,7 @@ guessInput.addEventListener("input", () => {
   }
 
   const normalizedQuery = normalize(query);
-  const matchingNames = currentTierPlayers
-    .map((player) => player.name)
+  const matchingNames = allFootballerNames
     .filter((name) => normalize(name).includes(normalizedQuery))
     .slice(0, 6); // keep the list short so it doesn't take over the screen
 
@@ -189,17 +202,18 @@ function hideDropdown() {
   guessDropdown.classList.add("hidden");
 }
 
-// Pressing Enter submits the guess too, as long as the typed text exactly
-// matches one of the real player names in the current tier.
+// Pressing Enter submits whatever's typed as a guess. We don't require it to
+// match something in the search pool first -- submitGuess() below checks it
+// against the real answer directly, so this works no matter which pool (or
+// neither) the typed text came from.
 guessInput.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || roundOver) return;
 
-  const typed = normalize(guessInput.value.trim());
-  const match = currentTierPlayers.find((player) => normalize(player.name) === typed);
-  if (match) {
-    hideDropdown();
-    submitGuess(match.name);
-  }
+  const typed = guessInput.value.trim();
+  if (typed === "") return;
+
+  hideDropdown();
+  submitGuess(typed);
 });
 
 // ---------------------------------------------------------------------------

@@ -73,9 +73,12 @@
     </section>
   </main>
 
-  <!-- Plain scripts (not modules) -- careerPlayers.js just declares a global
-       `careerPlayers` variable, and careerPaths.js below uses it directly. -->
+  <!-- careerPlayers.js is a plain script that just declares a global
+       `careerPlayers` variable (the answer pool). careerPaths.js is loaded
+       as a module (like the impostor game's main.js) so it can import the
+       read-only search-name list from data.js -- see the comment at the top
+       of careerPaths.js for why there are two separate lists. -->
   <script src="js/careerPlayers.js"></script>
-  <script src="js/careerPaths.js"></script>
+  <script type="module" src="js/careerPaths.js"></script>
 </body>
 </html>
