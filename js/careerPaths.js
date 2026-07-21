@@ -9,13 +9,18 @@
 //    footballers with 4+ verified senior clubs.
 //
 // 2. The SEARCH pool: js/data.js's `players` list (the football-impostor
-//    game's ~200 names), imported read-only below. This is ONLY used to
-//    populate the search-as-you-type dropdown. If the dropdown searched the
-//    answer pool instead, it would double as an answer key -- typing any
+//    game's ~200 names), imported read-only below, PLUS every name from
+//    every tier of careerPlayers (easy+medium+hard combined, not just the
+//    tier currently being played). This is ONLY used to populate the
+//    search-as-you-type dropdown. If the dropdown searched just the current
+//    tier's answer pool, it would double as an answer key -- typing any
 //    letter would instantly show you the small list of possible answers.
 //    Searching a much bigger, unrelated name list keeps the dropdown useful
-//    without giving the game away. We never modify data.js -- just import
-//    its exported list, same as main.js already does for the impostor game.
+//    without giving the game away. We still mix in every careerPlayers name
+//    (from all tiers) so the actual mystery player is always findable, even
+//    if data.js happens not to include them (e.g. "Álvaro Morata" isn't in
+//    data.js's list at all). We never modify data.js -- just import its
+//    exported list, same as main.js already does for the impostor game.
 import { players as allFootballerNames } from "./data.js";
 
 // ---------------------------------------------------------------------------
@@ -40,9 +45,21 @@ const answerBox = document.getElementById("answer-box");
 const answerName = document.getElementById("answer-name");
 const giveUpBtn = document.getElementById("give-up-btn");
 const newRoundBtn = document.getElementById("new-round-btn");
+const changeDifficultyBtn = document.getElementById("change-difficulty-btn");
 
 const MAX_GUESSES = 5;
 const STARTING_CLUB_COUNT = 2; // how many clubs are revealed right at the start
+
+// The full search pool: data.js's big decoy list, plus every player name
+// from every difficulty tier (not just the one being played). Built once,
+// since neither list changes while the page is open.
+const allAnswerPoolNames = [
+  ...(careerPlayers.easy || []),
+  ...(careerPlayers.medium || []),
+  ...(careerPlayers.hard || []),
+].map((player) => player.name);
+
+const searchPoolNames = [...new Set([...allFootballerNames, ...allAnswerPoolNames])];
 
 // ---------------------------------------------------------------------------
 // Game state -- everything we need to remember for the current round.
@@ -132,6 +149,12 @@ function startNewRound() {
 
 newRoundBtn.addEventListener("click", startNewRound);
 
+// "Change difficulty" abandons the current round (if any) and goes back to
+// the start screen so a different difficulty can be picked.
+changeDifficultyBtn.addEventListener("click", () => {
+  showScreen(startScreen);
+});
+
 // ---------------------------------------------------------------------------
 // Progressive career reveal: only show the first `revealedClubCount` clubs.
 // ---------------------------------------------------------------------------
@@ -166,7 +189,7 @@ guessInput.addEventListener("input", () => {
   }
 
   const normalizedQuery = normalize(query);
-  const matchingNames = allFootballerNames
+  const matchingNames = searchPoolNames
     .filter((name) => normalize(name).includes(normalizedQuery))
     .slice(0, 6); // keep the list short so it doesn't take over the screen
 
