@@ -5,9 +5,11 @@
  * What it does:
  *   1. Reads the player name lists below (easy / medium / hard).
  *   2. For each unique name, calls api-football.com to resolve it to a player ID + photo.
- *   3. Fetches that player's team history and turns it into an ordered list of
- *      { club, startYear, endYear } "spells".
- *   4. Drops any player with fewer than 4 distinct senior clubs (national teams excluded).
+ *   3. Fetches that player's team history (and merges in any loan spells the
+ *      team-history endpoint misses, via the transfers endpoint) into an
+ *      ordered list of { club, startYear, endYear } "spells".
+ *   4. Drops any player with fewer than 4 senior club stints (national teams excluded;
+ *      a repeat spell at a club the player left and later rejoined counts again).
  *   5. Writes the survivors to ../js/careerPlayers.js as a plain `const careerPlayers = {...}`.
  *
  * This script is NOT part of the game itself and is never loaded by index.html.
@@ -41,7 +43,7 @@ const CACHE_PATH = path.join(CACHE_DIR, 'players.json');
 const OUTPUT_PATH = path.join(ROOT, 'js', 'careerPlayers.js');
 
 const API_BASE = 'https://v3.football.api-sports.io';
-const MIN_CLUBS = 4; // hard rule: drop anyone with fewer than this many distinct senior clubs
+const MIN_CLUBS = 4; // hard rule: drop anyone with fewer than this many senior club stints (a return to a previous club counts again)
 // The free plan's real cap is 10 requests/minute (learned the hard way -- not
 // documented on /status). 6.5s keeps us under 10/min with a little headroom.
 const DELAY_BETWEEN_REQUESTS_MS = 6500;
@@ -243,8 +245,13 @@ async function searchPlayer(apiKey, name) {
   addCandidates(primaryJson.response);
 
   if (targetTokens.length > 1) {
-    const lastToken = targetTokens[targetTokens.length - 1];
-    const fallbackJson = await apiGet(apiKey, '/players/profiles', { search: lastToken });
+    // The API rejects search terms under 4 characters ("min" from "Heung-min"
+    // is only 3), so fall back to the last TWO tokens in that case.
+    let fallbackQuery = targetTokens[targetTokens.length - 1];
+    if (fallbackQuery.length < 4) {
+      fallbackQuery = targetTokens.slice(-2).join(' ');
+    }
+    const fallbackJson = await apiGet(apiKey, '/players/profiles', { search: fallbackQuery });
     addCandidates(fallbackJson.response);
   }
 
@@ -257,14 +264,24 @@ async function searchPlayer(apiKey, name) {
         normalize(`${player.firstname || ''} ${player.lastname || ''}`).split(' ').filter(Boolean)
       );
       const matchCount = targetTokens.filter((t) => candidateTokens.has(t)).length;
+      // A mononym star (e.g. "Casemiro") is often stored with `name` set to
+      // exactly that -- a strong signal over an obscure namesake whose
+      // profile happens to be more "complete" by coincidence.
+      const exactNameFieldMatch = normalize(player.name || '') === sanitized;
       return {
         player,
         matchCount,
         fullMatch: matchCount === targetTokens.length,
+        exactNameFieldMatch,
         completeness: profileCompleteness(player),
       };
     })
-    .sort((a, b) => b.matchCount - a.matchCount || b.completeness - a.completeness);
+    .sort(
+      (a, b) =>
+        b.matchCount - a.matchCount ||
+        Number(b.exactNameFieldMatch) - Number(a.exactNameFieldMatch) ||
+        b.completeness - a.completeness
+    );
 
   const best = scored[0];
   const tiedForBest = scored.filter((s) => s.matchCount === best.matchCount).length;
@@ -278,6 +295,25 @@ async function searchPlayer(apiKey, name) {
       ? scored.slice(0, 5).map((s) => `${s.player.name} (id ${s.player.id}, ${s.player.nationality || '?'})`)
       : null,
   };
+}
+
+// /players/teams under-reports lower-league and short loan spells (e.g. it's
+// missing Harry Kane's Norwich and Leicester loans entirely). /transfers
+// often has the ones /players/teams misses, and explicitly flags loans with
+// type "Loan" -- so we fetch it too and merge in any club it mentions that
+// isn't already accounted for.
+async function fetchTransfers(apiKey, playerId) {
+  const json = await apiGet(apiKey, '/transfers', { player: playerId });
+  const records = json.response && json.response[0] ? json.response[0].transfers : [];
+
+  return records
+    .filter((t) => t.date && t.teams)
+    .map((t) => ({
+      year: Number(t.date.slice(0, 4)),
+      teamIn: t.teams.in ? t.teams.in.name : null,
+      teamOut: t.teams.out ? t.teams.out.name : null,
+    }))
+    .sort((a, b) => a.year - b.year);
 }
 
 async function fetchCareer(apiKey, playerId, nationality) {
@@ -311,6 +347,31 @@ async function fetchCareer(apiKey, playerId, nationality) {
         if (current !== undefined) spellStart = current;
       }
       prev = current;
+    }
+  }
+
+  // Fill in any club /players/teams missed using /transfers. We only have a
+  // single transfer date to go on for these (not a full season range), so
+  // they're recorded as a one-year stint -- approximate, but far better than
+  // silently dropping a real loan spell.
+  const transfers = await fetchTransfers(apiKey, playerId);
+  const knownClubKeys = new Set(spells.map((s) => normalize(s.club)));
+
+  for (const t of transfers) {
+    for (const clubName of [t.teamIn, t.teamOut]) {
+      if (!clubName) continue;
+      const key = normalize(clubName);
+      if (knownClubKeys.has(key)) continue;
+
+      const exclusionReason = isNonSeniorTeam(clubName, nationality);
+      if (exclusionReason) {
+        excludedTeams.push(`${clubName} (${exclusionReason})`);
+        knownClubKeys.add(key);
+        continue;
+      }
+
+      knownClubKeys.add(key);
+      spells.push({ club: clubName, startYear: t.year, endYear: t.year });
     }
   }
 
@@ -399,20 +460,27 @@ async function main() {
 
       const { spells, excludedTeams } = await fetchCareer(apiKey, player.id, player.nationality);
 
-      const distinctClubs = new Set(spells.map((s) => s.club));
+      // Count STOPS (stints), not distinct clubs -- a player who left and
+      // later rejoined the same club (e.g. Griezmann: Real Sociedad,
+      // Atletico, Barcelona, Atletico again) should have that return trip
+      // count toward the minimum, not get collapsed away.
+      const stintClubNames = spells.map((s) => s.club);
 
-      if (distinctClubs.size < MIN_CLUBS) {
-        console.log(`DROPPED (${distinctClubs.size} club${distinctClubs.size === 1 ? '' : 's'}: ${[...distinctClubs].join(', ') || 'none'})`);
-        dropped.push({ name, clubCount: distinctClubs.size, clubs: [...distinctClubs] });
-        cache[key] = { status: 'dropped', name, clubCount: distinctClubs.size, clubs: [...distinctClubs] };
+      if (stintClubNames.length < MIN_CLUBS) {
+        console.log(`DROPPED (${stintClubNames.length} stint${stintClubNames.length === 1 ? '' : 's'}: ${stintClubNames.join(', ') || 'none'})`);
+        dropped.push({ name, stintCount: stintClubNames.length, clubs: stintClubNames });
+        cache[key] = { status: 'dropped', name, stintCount: stintClubNames.length, clubs: stintClubNames };
         saveCache(cache);
         continue;
       }
 
-      console.log(`kept (${distinctClubs.size} clubs)${excludedTeams.length ? ` [excluded national team(s): ${excludedTeams.join(', ')}]` : ''}`);
+      console.log(`kept (${stintClubNames.length} stints)${excludedTeams.length ? ` [excluded national team(s): ${excludedTeams.join(', ')}]` : ''}`);
       cache[key] = {
         status: 'kept',
-        name: player.name,
+        // Use the original input name (e.g. "Kevin De Bruyne"), not the
+        // API's `player.name` field -- that's often abbreviated to
+        // "F. Lastname" for well-known players, which looks wrong in the game.
+        name,
         id: player.id,
         photo: player.photo,
         career: spells,
@@ -454,9 +522,9 @@ async function main() {
   console.log(`Kept: easy=${tiersOut.easy.length}, medium=${tiersOut.medium.length}, hard=${tiersOut.hard.length}`);
 
   if (dropped.length) {
-    console.log(`\nDropped (fewer than ${MIN_CLUBS} distinct senior clubs):`);
+    console.log(`\nDropped (fewer than ${MIN_CLUBS} senior club stints):`);
     for (const d of dropped) {
-      console.log(`  - ${d.name}: ${d.clubCount} club(s) [${d.clubs.join(', ') || 'none'}]`);
+      console.log(`  - ${d.name}: ${d.stintCount} stint(s) [${d.clubs.join(', ') || 'none'}]`);
     }
   }
   if (notFound.length) {
@@ -505,10 +573,11 @@ function writeCareerPlayersFile(tiersOut) {
 // Regenerate by running: node scripts/buildPlayers.js
 //
 // Data source: api-football.com (https://www.api-football.com/).
-// Each player kept here has 4 or more distinct senior clubs in their career
-// (national teams are excluded from that count). Career arrays are ordered
-// chronologically; a player who left and later rejoined the same club will
-// show up as two separate entries for that club.
+// Each player kept here has 4 or more senior club STINTS in their career
+// (national teams are excluded from that count). A stint counts every time,
+// so a player who left and later rejoined the same club has that return
+// trip count separately -- career arrays are ordered chronologically, and
+// that player will show up as two separate entries for the same club.
 //
 // Loaded as a plain script (not an ES module) -- include with:
 //   <script src="js/careerPlayers.js"></script>
