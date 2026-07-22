@@ -346,9 +346,16 @@ function submitGuess(guessedName) {
 
   guessInput.value = "";
 
+  const isFullyRevealed = revealedClubCount >= currentPlayer.career.length;
+  const isLastGuessRemaining = guessesUsed === maxGuesses - 1;
+
   if (guessesUsed >= maxGuesses) {
     feedbackMessage.textContent = `Out of guesses! It was ${currentPlayer.name}.`;
     endRound();
+  } else if (isFullyRevealed && isLastGuessRemaining) {
+    // The whole career is visible and this was their second-to-last guess --
+    // warn them the next one is do-or-die.
+    feedbackMessage.textContent = "Final guess!";
   } else {
     feedbackMessage.textContent = `Wrong guess: ${guessedName}`;
   }
