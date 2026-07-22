@@ -35,6 +35,7 @@ const startRoundBtn = document.getElementById("start-round-btn");
 const startMessage = document.getElementById("start-message");
 
 const difficultyLabel = document.getElementById("difficulty-label");
+const cycleMessage = document.getElementById("cycle-message");
 const playerPhoto = document.getElementById("player-photo");
 const careerList = document.getElementById("career-list");
 const guessInput = document.getElementById("guess-input");
@@ -48,7 +49,8 @@ const newRoundBtn = document.getElementById("new-round-btn");
 const changeDifficultyBtn = document.getElementById("change-difficulty-btn");
 
 const MAX_GUESSES = 5;
-const STARTING_CLUB_COUNT = 2; // how many clubs are revealed right at the start
+const STARTING_CLUB_COUNT = 1; // how many clubs are revealed right at the start
+const SEEN_PLAYERS_STORAGE_KEY = "careerPathsSeenPlayerIds";
 
 // The full search pool: data.js's big decoy list, plus every player name
 // from every difficulty tier (not just the one being played). Built once,
@@ -96,6 +98,58 @@ function showScreen(screenToShow) {
 }
 
 // ---------------------------------------------------------------------------
+// "Don't repeat players on this device" -- remembered in localStorage as
+// { easy: [id, id, ...], medium: [...], hard: [...] }, so a refresh or a
+// later visit still knows who you've already seen per difficulty.
+// ---------------------------------------------------------------------------
+
+function loadSeenPlayerIds() {
+  try {
+    const raw = localStorage.getItem(SEEN_PLAYERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    // localStorage can be unavailable (e.g. private browsing) -- just play
+    // without memory instead of crashing.
+    return {};
+  }
+}
+
+function saveSeenPlayerIds(seenPlayerIds) {
+  try {
+    localStorage.setItem(SEEN_PLAYERS_STORAGE_KEY, JSON.stringify(seenPlayerIds));
+  } catch {
+    // Ignore -- worst case, repeats aren't remembered this session.
+  }
+}
+
+// Picks the next mystery player for `tierName`, avoiding anyone already seen
+// on this device until every player in that tier has come up at least once.
+// Returns { player, justCompletedCycle } so the caller can show a message
+// when the "everyone's been seen" reset happens.
+function pickNextPlayer(tierName, tierPlayers) {
+  const seenPlayerIds = loadSeenPlayerIds();
+  let seenIdsForTier = seenPlayerIds[tierName] || [];
+
+  let unseenPlayers = tierPlayers.filter((player) => !seenIdsForTier.includes(player.id));
+  let justCompletedCycle = false;
+
+  if (unseenPlayers.length === 0) {
+    // Everyone in this tier has been shown before -- start a fresh cycle.
+    // (Only worth announcing if there was more than one player to cycle
+    // through in the first place.)
+    justCompletedCycle = seenIdsForTier.length > 0 && tierPlayers.length > 1;
+    unseenPlayers = tierPlayers;
+    seenIdsForTier = [];
+  }
+
+  const player = unseenPlayers[randomIndex(unseenPlayers.length)];
+  seenPlayerIds[tierName] = [...seenIdsForTier, player.id];
+  saveSeenPlayerIds(seenPlayerIds);
+
+  return { player, justCompletedCycle };
+}
+
+// ---------------------------------------------------------------------------
 // Start screen: pick a difficulty and start a round.
 // ---------------------------------------------------------------------------
 
@@ -121,13 +175,18 @@ startRoundBtn.addEventListener("click", () => {
 // ---------------------------------------------------------------------------
 
 function startNewRound() {
-  currentPlayer = currentTierPlayers[randomIndex(currentTierPlayers.length)];
+  const { player, justCompletedCycle } = pickNextPlayer(currentTierName, currentTierPlayers);
+  currentPlayer = player;
   guessesUsed = 0;
   revealedClubCount = Math.min(STARTING_CLUB_COUNT, currentPlayer.career.length);
   roundOver = false;
 
   difficultyLabel.textContent =
     "Difficulty: " + currentTierName[0].toUpperCase() + currentTierName.slice(1);
+
+  cycleMessage.textContent = justCompletedCycle
+    ? `You've seen every player in this difficulty — starting over, repeats may happen now!`
+    : "";
 
   // Show the (blurred) photo for the new player. If the image URL is broken,
   // the onerror handler hides it completely instead of showing a broken icon.
@@ -164,8 +223,15 @@ function updateCareerList() {
 
   const clubsToShow = currentPlayer.career.slice(0, revealedClubCount);
   for (const stint of clubsToShow) {
+    // A single-year stint (e.g. a short loan spell) shows just "2024"
+    // instead of the redundant "2024–2024".
+    const years =
+      stint.startYear === stint.endYear
+        ? `${stint.startYear}`
+        : `${stint.startYear}–${stint.endYear}`;
+
     const item = document.createElement("li");
-    item.textContent = `${stint.club} (${stint.startYear}–${stint.endYear})`;
+    item.textContent = `${stint.club} (${years})`;
     careerList.appendChild(item);
   }
 }
