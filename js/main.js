@@ -2,7 +2,16 @@
 // All the game logic for Football Impostor.
 // Data (the list of footballers) lives in data.js — this file just uses it.
 
-import { players } from "./data.js";
+import { players, easyPlayers, mediumPlayers, hardPlayers } from "./data.js";
+
+// Which name list to pick the secret footballer from, keyed by the
+// "Difficulty" select's value.
+const playerPoolsByDifficulty = {
+  classic: players,
+  easy: easyPlayers,
+  medium: mediumPlayers,
+  hard: hardPlayers,
+};
 
 // ---------------------------------------------------------------------------
 // Grab references to all the HTML elements we'll need to read from / write to.
@@ -14,6 +23,7 @@ const discussionScreen = document.getElementById("discussion-screen");
 
 const playerCountSelect = document.getElementById("player-count");
 const impostorCountSelect = document.getElementById("impostor-count");
+const difficultySelect = document.getElementById("difficulty-select");
 const nameInputsContainer = document.getElementById("name-inputs");
 const startGameBtn = document.getElementById("start-game-btn");
 
@@ -113,8 +123,10 @@ startGameBtn.addEventListener("click", () => {
     playerNames.push(name);
   }
 
-  // Pick the secret footballer and the impostors for this round.
-  secretPlayer = players[randomIndex(players.length)];
+  // Pick the secret footballer (from whichever difficulty pool is selected)
+  // and the impostors for this round.
+  const playerPool = playerPoolsByDifficulty[difficultySelect.value] || players;
+  secretPlayer = playerPool[randomIndex(playerPool.length)];
   impostorIndexes = pickRandomIndexes(playerCount, impostorCount);
 
   currentTurn = 0;

@@ -225,3 +225,35 @@ export const players = [
   "Diego Milito",
   "Esteban Cambiasso"
 ];
+
+// Difficulty-tiered lists for the setup screen's "Difficulty" option. These
+// are the same three lists used to build the Career Paths game's player
+// data (see scripts/buildPlayers.js), reused here as plain name lists --
+// Football Impostor only needs a name, not career/photo data.
+export const easyPlayers = [
+  "Cristiano Ronaldo", "Kylian Mbappé", "Neymar", "Mohamed Salah", "Kevin De Bruyne",
+  "Harry Kane", "Robert Lewandowski", "Luka Modrić", "Bukayo Saka", "Antoine Griezmann",
+  "Son Heung-min", "Karim Benzema", "Sergio Ramos", "Virgil van Dijk", "Sadio Mané",
+  "Raheem Sterling", "Casemiro", "Alexis Mac Allister", "Marcus Rashford", "Achraf Hakimi",
+  "Julián Álvarez", "Michael Olise", "Kai Havertz", "Álvaro Morata", "Memphis Depay",
+  "Pierre-Emerick Aubameyang", "Wojciech Szczęsny",
+];
+
+export const mediumPlayers = [
+  "Victor Osimhen", "Rafael Leão", "Randal Kolo Muani", "Khvicha Kvaratskhelia", "Theo Hernández",
+  "João Cancelo", "Thibaut Courtois", "Christopher Nkunku", "Ousmane Dembélé", "Serhou Guirassy",
+  "Benjamin Šeško", "Marc Cucurella", "Federico Chiesa", "Álvaro Morata", "James Rodríguez",
+  "Julian Draxler", "Piotr Zieliński", "Wissam Ben Yedder", "Nabil Fekir", "Anthony Martial",
+  "Jesse Lingard", "Ruben Loftus-Cheek", "Aleksandar Mitrović", "Luka Jović", "Andriy Yarmolenko",
+  "Marko Arnautović", "Arkadiusz Milik", "Moussa Dembélé", "Sébastien Haller", "Gerard Deulofeu",
+];
+
+export const hardPlayers = [
+  "Mario Balotelli", "Islam Slimani", "Cenk Tosun", "Vincent Aboubakar", "Steven Nzonzi",
+  "M'Baye Niang", "Stephan El Shaarawy", "Éver Banega", "Franck Kessié", "Kevin Gameiro",
+  "Suso", "Denis Suárez", "Sardar Azmoun", "Mehdi Taremi", "Malcom",
+  "Amadou Haïdara", "Boubacar Kamara", "Takefusa Kubo", "Rasmus Højlund", "Elye Wahi",
+  "Hugo Ekitiké", "Adnan Januzaj", "Ross Barkley", "Dele Alli", "Danny Ings",
+  "Krzysztof Piątek", "Jean-Philippe Mateta", "Munir El Haddadi", "Alexander Isak", "Viktor Gyökeres",
+  "Dominik Livaković", "Salomón Rondón",
+];
