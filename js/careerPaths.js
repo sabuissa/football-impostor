@@ -37,10 +37,10 @@ const startMessage = document.getElementById("start-message");
 const difficultyLabel = document.getElementById("difficulty-label");
 const cycleMessage = document.getElementById("cycle-message");
 const playerPhoto = document.getElementById("player-photo");
+const showPhotoToggle = document.getElementById("show-photo-toggle");
 const careerList = document.getElementById("career-list");
 const guessInput = document.getElementById("guess-input");
 const guessDropdown = document.getElementById("guess-dropdown");
-const guessesLeftText = document.getElementById("guesses-left");
 const feedbackMessage = document.getElementById("feedback-message");
 const answerBox = document.getElementById("answer-box");
 const answerName = document.getElementById("answer-name");
@@ -48,7 +48,6 @@ const giveUpBtn = document.getElementById("give-up-btn");
 const newRoundBtn = document.getElementById("new-round-btn");
 const changeDifficultyBtn = document.getElementById("change-difficulty-btn");
 
-const MAX_GUESSES = 5;
 const STARTING_CLUB_COUNT = 1; // how many clubs are revealed right at the start
 const SEEN_PLAYERS_STORAGE_KEY = "careerPathsSeenPlayerIds";
 
@@ -71,8 +70,27 @@ let currentTierName = "easy";
 let currentTierPlayers = []; // the array of players for the chosen difficulty
 let currentPlayer = null; // the randomly chosen mystery player
 let guessesUsed = 0;
+let maxGuesses = 0; // set per round: number of clubs in the career + 1
 let revealedClubCount = STARTING_CLUB_COUNT;
 let roundOver = false; // true once the round has been won, lost, or given up
+
+let photoVisible = showPhotoToggle.checked; // the "Show photo" toggle preference
+let photoLoadFailed = false; // true if THIS round's photo URL failed to load
+
+// Whether the photo is actually shown depends on two independent things:
+// the user's toggle preference, and whether the image URL even worked.
+function applyPhotoVisibility() {
+  if (photoVisible && !photoLoadFailed) {
+    playerPhoto.classList.remove("hidden");
+  } else {
+    playerPhoto.classList.add("hidden");
+  }
+}
+
+showPhotoToggle.addEventListener("change", () => {
+  photoVisible = showPhotoToggle.checked;
+  applyPhotoVisibility();
+});
 
 // ---------------------------------------------------------------------------
 // Small helper functions
@@ -178,6 +196,7 @@ function startNewRound() {
   const { player, justCompletedCycle } = pickNextPlayer(currentTierName, currentTierPlayers);
   currentPlayer = player;
   guessesUsed = 0;
+  maxGuesses = currentPlayer.career.length + 1; // scales with how many clubs there are to reveal
   revealedClubCount = Math.min(STARTING_CLUB_COUNT, currentPlayer.career.length);
   roundOver = false;
 
@@ -188,12 +207,17 @@ function startNewRound() {
     ? `You've seen every player in this difficulty — starting over, repeats may happen now!`
     : "";
 
-  // Show the (blurred) photo for the new player. If the image URL is broken,
-  // the onerror handler hides it completely instead of showing a broken icon.
-  playerPhoto.classList.remove("hidden");
+  // Show the (blurred) photo for the new player -- unless the "Show photo"
+  // toggle is off, or the image URL turns out to be broken (the onerror
+  // handler hides it completely instead of showing an ugly broken icon).
+  photoLoadFailed = false;
   playerPhoto.classList.add("blurred");
-  playerPhoto.onerror = () => playerPhoto.classList.add("hidden");
+  playerPhoto.onerror = () => {
+    photoLoadFailed = true;
+    applyPhotoVisibility();
+  };
   playerPhoto.src = currentPlayer.photo;
+  applyPhotoVisibility();
 
   guessInput.value = "";
   guessInput.disabled = false;
@@ -203,7 +227,6 @@ function startNewRound() {
   giveUpBtn.classList.remove("hidden");
 
   updateCareerList();
-  updateGuessesLeftText();
 }
 
 newRoundBtn.addEventListener("click", startNewRound);
@@ -234,10 +257,6 @@ function updateCareerList() {
     item.textContent = `${stint.club} (${years})`;
     careerList.appendChild(item);
   }
-}
-
-function updateGuessesLeftText() {
-  guessesLeftText.textContent = `Guesses left: ${MAX_GUESSES - guessesUsed}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -324,11 +343,10 @@ function submitGuess(guessedName) {
   guessesUsed++;
   revealedClubCount = Math.min(revealedClubCount + 1, currentPlayer.career.length);
   updateCareerList();
-  updateGuessesLeftText();
 
   guessInput.value = "";
 
-  if (guessesUsed >= MAX_GUESSES) {
+  if (guessesUsed >= maxGuesses) {
     feedbackMessage.textContent = `Out of guesses! It was ${currentPlayer.name}.`;
     endRound();
   } else {

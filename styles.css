@@ -239,6 +239,17 @@ button {
   text-decoration: underline;
 }
 
+.photo-toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
 .player-photo {
   display: block;
   width: 160px;

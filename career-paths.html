@@ -17,12 +17,12 @@
       <p class="subtitle">Guess the footballer from their club career!</p>
 
       <div class="rules-box">
-        <p>Pick a difficulty and we'll reveal a mystery player's first couple
-          of clubs. Guess who it is before you run out of tries!</p>
+        <p>Pick a difficulty and we'll reveal a mystery player's first club.
+          Guess who it is before you run out of tries!</p>
         <ul>
           <li>Type a name to search, then tap it in the list to lock in your guess.</li>
           <li>Every wrong guess reveals one more club in their career.</li>
-          <li>You get 5 guesses before the answer is revealed.</li>
+          <li>Your guesses are limited, but you won't be told exactly how many are left — make each one count!</li>
         </ul>
       </div>
 
@@ -45,6 +45,11 @@
         <p id="difficulty-label" class="pass-prompt"></p>
         <p id="cycle-message" class="guesses-left"></p>
 
+        <label class="photo-toggle-label">
+          <input type="checkbox" id="show-photo-toggle" checked />
+          Show photo
+        </label>
+
         <!-- alt text + onerror (set in JS) make sure a broken photo URL
              never shows an ugly broken-image icon -->
         <img id="player-photo" class="player-photo blurred" alt="Mystery player" />
@@ -61,7 +66,6 @@
           <div id="guess-dropdown" class="guess-dropdown hidden"></div>
         </div>
 
-        <p id="guesses-left" class="guesses-left"></p>
         <p id="feedback-message" class="feedback-message"></p>
 
         <div id="answer-box" class="answer-display hidden">
