@@ -3,104 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Football Impostor</title>
+  <title>Football Games</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
   <main id="app">
+    <section class="screen">
+      <h1>⚽ Football Games</h1>
+      <p class="subtitle">Pick a game to play</p>
 
-    <!-- SCREEN 1: Setup — choose player count, impostor count, and names -->
-    <section id="setup-screen" class="screen">
-      <h1>⚽ Football Impostor</h1>
-      <p class="subtitle">A pass-and-play party game. One player is secretly the impostor!</p>
-
-      <a href="career-paths.html" class="nav-highlight-link">Also try: Career Paths &rarr;</a>
-
-      <div class="rules-box">
-        <p>
-          Everyone but the impostor(s) is secretly shown the same footballer's
-          name. The impostor(s) see nothing — just "YOU ARE THE IMPOSTOR."
-        </p>
-        <ul>
-          <li>Pass the device around so each player can privately see their role.</li>
-          <li>Civilians take turns describing the footballer without saying the name, to prove they know it.</li>
-          <li>Impostors have to bluff along, using context clues from others' descriptions.</li>
-          <li>After everyone's had a chance to talk, vote on who you think the impostor is.</li>
-          <li>Impostors win if they stay hidden; civilians win if they catch every impostor.</li>
-        </ul>
-      </div>
-
-      <div class="field">
-        <label for="player-count">Number of players</label>
-        <select id="player-count">
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5" selected>5</option>
-          <option value="6">6</option>
-          <option value="7">7</option>
-          <option value="8">8</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="impostor-count">Number of impostors</label>
-        <select id="impostor-count">
-          <option value="1" selected>1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label for="difficulty-select">Difficulty</label>
-        <select id="difficulty-select">
-          <option value="classic" selected>Classic (all players)</option>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>Player names</label>
-        <p class="field-hint">Tap a name below to edit it</p>
-        <div id="name-inputs"></div>
-      </div>
-
-      <button id="start-game-btn" class="primary-btn">Start Game</button>
-    </section>
-
-    <!-- SCREEN 2: Pass and play — reveal each player's role one at a time -->
-    <section id="reveal-screen" class="screen hidden">
       <div class="card">
-        <p id="pass-prompt" class="pass-prompt"></p>
-        <button id="reveal-role-btn" class="primary-btn">Tap to see your role</button>
-
-        <div id="role-display" class="role-display hidden">
-          <p id="role-text"></p>
-          <button id="hide-role-btn" class="secondary-btn">Hide and pass</button>
-        </div>
+        <p class="pass-prompt">⚽ Football Impostor</p>
+        <p class="hint">A pass-and-play party game. One player is secretly the impostor!</p>
+        <a href="impostor.html" class="link-btn primary-btn">Play Football Impostor</a>
       </div>
-    </section>
 
-    <!-- SCREEN 3: Discussion — announce who starts, allow revealing the impostor -->
-    <section id="discussion-screen" class="screen hidden">
       <div class="card">
-        <p id="starter-text" class="starter-text"></p>
-        <p class="hint">Discuss and try to find the impostor(s)! When ready, reveal the answer.</p>
-        <button id="reveal-impostor-btn" class="primary-btn">Reveal impostor(s)</button>
-
-        <div id="answer-display" class="answer-display hidden">
-          <p id="answer-text"></p>
-        </div>
-
-        <button id="new-round-btn" class="secondary-btn">New round</button>
+        <p class="pass-prompt">🧭 Career Paths</p>
+        <p class="hint">Guess the footballer from their club career.</p>
+        <a href="career-paths.html" class="link-btn primary-btn">Play Career Paths</a>
       </div>
     </section>
-
   </main>
 
-  <script type="module" src="js/main.js"></script>
 </body>
 </html>

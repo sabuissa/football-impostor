@@ -347,3 +347,19 @@ button {
 #give-up-btn:hover {
   background: var(--accent-hover);
 }
+
+/* Makes an <a> look and behave like the existing <button> styles (which are
+   tied to the `button` tag selector) -- used for the home page's "Play"
+   links, which need to be real links, not buttons. */
+.link-btn {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 14px 20px;
+  cursor: pointer;
+}
