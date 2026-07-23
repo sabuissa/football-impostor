@@ -63,24 +63,41 @@ const NAME_TIERS = {
     'Julián Álvarez', 'Michael Olise', 'Kai Havertz', 'Álvaro Morata', 'Memphis Depay',
     'Pierre-Emerick Aubameyang', 'Wojciech Szczęsny',
   ],
+  // Pre-screened by the user for 4+ distinct senior clubs -- replaces the
+  // earlier medium/hard lists, which had a lot of overlap and some
+  // never-resolved names. Order matters here: see TIER_RESOLUTION_ORDER
+  // below for why.
   medium: [
-    'Victor Osimhen', 'Rafael Leão', 'Randal Kolo Muani', 'Khvicha Kvaratskhelia', 'Theo Hernández',
-    'João Cancelo', 'Thibaut Courtois', 'Christopher Nkunku', 'Ousmane Dembélé', 'Serhou Guirassy',
-    'Benjamin Šeško', 'Marc Cucurella', 'Federico Chiesa', 'Álvaro Morata', 'James Rodríguez',
-    'Julian Draxler', 'Piotr Zieliński', 'Wissam Ben Yedder', 'Nabil Fekir', 'Anthony Martial',
-    'Jesse Lingard', 'Ruben Loftus-Cheek', 'Aleksandar Mitrović', 'Luka Jović', 'Andriy Yarmolenko',
-    'Marko Arnautović', 'Arkadiusz Milik', 'Moussa Dembélé', 'Sébastien Haller', 'Gerard Deulofeu',
+    'Álvaro Morata', 'James Rodríguez', 'Memphis Depay', 'Julian Draxler', 'Anthony Martial',
+    'Jesse Lingard', 'Marko Arnautović', 'Aleksandar Mitrović', 'Luka Jović', 'Sébastien Haller',
+    'Arkadiusz Milik', 'Gerard Deulofeu', 'Andriy Yarmolenko', 'Ross Barkley', 'Danny Ings',
+    'Ruben Loftus-Cheek', 'Moussa Dembélé', 'Christopher Nkunku', 'Ousmane Dembélé', 'João Cancelo',
+    'Marc Cucurella', 'Victor Osimhen', 'Khvicha Kvaratskhelia', 'Randal Kolo Muani', 'Thibaut Courtois',
+    'Theo Hernández', 'Timo Werner', 'Riyad Mahrez', 'Wilfried Zaha',
   ],
   hard: [
     'Mario Balotelli', 'Islam Slimani', 'Cenk Tosun', 'Vincent Aboubakar', 'Steven Nzonzi',
     "M'Baye Niang", 'Stephan El Shaarawy', 'Éver Banega', 'Franck Kessié', 'Kevin Gameiro',
     'Suso', 'Denis Suárez', 'Sardar Azmoun', 'Mehdi Taremi', 'Malcom',
-    'Amadou Haïdara', 'Boubacar Kamara', 'Takefusa Kubo', 'Rasmus Højlund', 'Elye Wahi',
-    'Hugo Ekitiké', 'Adnan Januzaj', 'Ross Barkley', 'Dele Alli', 'Danny Ings',
-    'Krzysztof Piątek', 'Jean-Philippe Mateta', 'Munir El Haddadi', 'Alexander Isak', 'Viktor Gyökeres',
-    'Dominik Livaković', 'Salomón Rondón',
+    'Salomón Rondón', 'Adnan Januzaj', 'Dele Alli', 'Krzysztof Piątek', 'Jean-Philippe Mateta',
+    'Munir El Haddadi', 'Alexander Isak', 'Viktor Gyökeres', 'Rasmus Højlund', 'Hugo Ekitiké',
+    'Elye Wahi', 'Takefusa Kubo', 'Alexis Sánchez', 'Paulo Dybala', 'Ángel Di María',
+    'Hakim Ziyech', 'André Onana', 'Édouard Mendy', 'Kalidou Koulibaly', 'Nicolas Pépé',
+    'Thomas Partey', 'Mohammed Kudus', 'Jadon Sancho', 'Raphaël Varane', 'Kingsley Coman',
+    'Adrien Rabiot', 'Georginio Wijnaldum', 'Donny van de Beek', 'Matthijs de Ligt', 'Xavi Simons',
+    'Sofyan Amrabat', 'Isco', 'Saúl Ñíguez', 'Yannick Carrasco', 'Rodrigo De Paul',
+    'Giovani Lo Celso', 'Nicolás Otamendi', 'Marcos Acuña', 'Leandro Paredes', 'Lisandro Martínez',
+    'Emiliano Martínez', 'Cristian Romero', 'Wojciech Szczęsny', 'Dominik Livaković', 'Yassine Bounou',
   ],
 };
+
+// Per user request: resolve NEW (not-yet-cached) names medium-first (in the
+// order given), then hard, then easy (easy is already fully resolved from
+// earlier runs, so this only matters for genuinely new names). A reserve is
+// carved out of the budget for hard specifically so it isn't starved if
+// medium alone would eat the whole run.
+const TIER_RESOLUTION_ORDER = ['medium', 'hard', 'easy'];
+const RESERVED_REQUESTS_FOR_HARD = 25;
 
 // Backup list of national-team names to exclude from the club count, in
 // addition to matching against each player's own nationality field. Not
@@ -403,16 +420,17 @@ async function main() {
     return;
   }
 
-  // Build the de-duplicated list of unique names to resolve, preserving the
-  // first tier each name appears in for logging purposes.
-  const uniqueNames = [];
+  // Build the de-duplicated list of names to resolve, in TIER_RESOLUTION_ORDER
+  // (medium, then hard, then easy), preserving the first tier each name
+  // appears in for both logging and the hard-tier budget reserve below.
+  const resolutionQueue = [];
   const seen = new Set();
-  for (const tier of Object.values(NAME_TIERS)) {
-    for (const name of tier) {
+  for (const tier of TIER_RESOLUTION_ORDER) {
+    for (const name of NAME_TIERS[tier] || []) {
       const key = normalize(name);
       if (!seen.has(key)) {
         seen.add(key);
-        uniqueNames.push(name);
+        resolutionQueue.push({ name, tier });
       }
     }
   }
@@ -423,13 +441,25 @@ async function main() {
   const ambiguousPicks = [];
   const failures = [];
   let ranOutOfBudget = false;
+  let mediumSkippedForReserve = 0;
 
-  console.log(`${uniqueNames.length} unique player names total. ${Object.keys(cache).length} already resolved from a previous run.\n`);
+  // Leave this many requests untouched by medium so hard is guaranteed to
+  // get started this run, even if medium alone could burn the whole budget.
+  const mediumRequestCeiling = Math.max(0, budget - RESERVED_REQUESTS_FOR_HARD);
 
-  for (const name of uniqueNames) {
+  console.log(`${resolutionQueue.length} unique player names total. ${Object.keys(cache).length} already resolved from a previous run.\n`);
+
+  for (const { name, tier } of resolutionQueue) {
     const key = normalize(name);
     if (cache[key]) {
       continue; // already resolved (kept or dropped) in a previous run
+    }
+
+    if (tier === 'medium' && requestCount >= mediumRequestCeiling) {
+      // Leave remaining medium names for a future run -- don't let medium
+      // eat the reserve that's meant for hard.
+      mediumSkippedForReserve += 1;
+      continue;
     }
 
     // Budget check uses the real request count (every attempt, success or
@@ -437,12 +467,12 @@ async function main() {
     // full of errors.
     if (requestCount + 2 > budget) {
       console.log(`\nStopping early to respect the daily rate limit (${budget} request budget reached).`);
-      console.log(`${uniqueNames.length - Object.keys(cache).length} names still unresolved -- run this script again (tomorrow, if on the free plan) to continue.`);
+      console.log(`${resolutionQueue.length - Object.keys(cache).length} names still unresolved -- run this script again (tomorrow, if on the free plan) to continue.`);
       ranOutOfBudget = true;
       break;
     }
 
-    process.stdout.write(`Resolving "${name}"... `);
+    process.stdout.write(`Resolving "${name}" [${tier}]... `);
     try {
       const { player, ambiguous, candidateSummary } = await searchPlayer(apiKey, name);
 
@@ -520,6 +550,11 @@ async function main() {
   console.log('\n=== Summary ===');
   console.log(`API requests used this run: ${requestCount}`);
   console.log(`Kept: easy=${tiersOut.easy.length}, medium=${tiersOut.medium.length}, hard=${tiersOut.hard.length}`);
+  if (mediumSkippedForReserve > 0) {
+    console.log(
+      `Skipped ${mediumSkippedForReserve} medium name(s) this run to reserve budget for hard -- run again to pick them up.`
+    );
+  }
 
   if (dropped.length) {
     console.log(`\nDropped (fewer than ${MIN_CLUBS} senior club stints):`);
