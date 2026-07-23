@@ -363,3 +363,34 @@ button {
   padding: 14px 20px;
   cursor: pointer;
 }
+
+/* Top nav bar (on the game pages) for jumping between Home / Football
+   Impostor / Career Paths without going back through the home page. */
+.game-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.game-nav a {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.game-nav a:hover {
+  background: var(--bg);
+}
+
+.game-nav a.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
