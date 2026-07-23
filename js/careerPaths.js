@@ -30,10 +30,6 @@ import { players as allFootballerNames } from "./data.js";
 const startScreen = document.getElementById("start-screen");
 const gameScreen = document.getElementById("game-screen");
 
-const difficultySelect = document.getElementById("difficulty-select");
-const startRoundBtn = document.getElementById("start-round-btn");
-const startMessage = document.getElementById("start-message");
-
 const difficultyLabel = document.getElementById("difficulty-label");
 const cycleMessage = document.getElementById("cycle-message");
 const playerPhoto = document.getElementById("player-photo");
@@ -67,6 +63,15 @@ const allAnswerPoolNames = [
 ].map((player) => player.name);
 
 const searchPoolNames = [...new Set([...allFootballerNames, ...allAnswerPoolNames])];
+
+// Every player from every tier, combined -- this is the "Random" mode's
+// answer pool. An empty tier just contributes nothing to the list, which is
+// exactly how it should be "skipped".
+const allPlayersPooled = [
+  ...(careerPlayers.easy || []),
+  ...(careerPlayers.medium || []),
+  ...(careerPlayers.hard || []),
+];
 
 // ---------------------------------------------------------------------------
 // Game state -- everything we need to remember for the current round.
@@ -229,25 +234,48 @@ function pickNextPlayer(tierName, tierPlayers) {
 }
 
 // ---------------------------------------------------------------------------
-// Start screen: pick a difficulty and start a round.
+// Start screen: one "Play" button per mode (easy/medium/hard/random). Each
+// mode's players are looked up here so we know up front whether that mode
+// actually has anyone to play -- if not, its row's button is disabled and
+// its description swapped for a "Not ready yet" note instead of letting
+// the player start a round that would immediately break.
 // ---------------------------------------------------------------------------
 
-startRoundBtn.addEventListener("click", () => {
-  currentTierName = difficultySelect.value;
-  currentTierPlayers = careerPlayers[currentTierName] || [];
+// tierPlayersFor("random") pools every tier together; for everything else
+// it's just that tier's own list from careerPlayers.js.
+function tierPlayersFor(tier) {
+  return tier === "random" ? allPlayersPooled : careerPlayers[tier] || [];
+}
 
-  // CRITICAL: some tiers may still be empty (medium/hard aren't filled in
-  // yet). Never let that crash the game or show a blank screen -- just tell
-  // the player and let them pick again.
-  if (currentTierPlayers.length === 0) {
-    startMessage.textContent = "This mode isn't ready yet — try Easy!";
-    return;
-  }
+function startRoundInTier(tier) {
+  currentTierName = tier;
+  currentTierPlayers = tierPlayersFor(tier);
 
-  startMessage.textContent = "";
+  // CRITICAL: defends against a broken round even though the button for an
+  // empty mode is already disabled below -- never let this crash the game
+  // or show a blank screen.
+  if (currentTierPlayers.length === 0) return;
+
   startNewRound();
   showScreen(gameScreen);
-});
+}
+
+const MODE_ROWS = [
+  { tier: "easy", playBtn: document.getElementById("play-easy-btn"), descText: document.getElementById("mode-desc-easy") },
+  { tier: "medium", playBtn: document.getElementById("play-medium-btn"), descText: document.getElementById("mode-desc-medium") },
+  { tier: "hard", playBtn: document.getElementById("play-hard-btn"), descText: document.getElementById("mode-desc-hard") },
+  { tier: "random", playBtn: document.getElementById("play-random-btn"), descText: document.getElementById("mode-desc-random") },
+];
+
+for (const row of MODE_ROWS) {
+  if (tierPlayersFor(row.tier).length === 0) {
+    row.playBtn.disabled = true;
+    row.descText.textContent = "Not ready yet";
+    row.descText.classList.add("not-ready");
+  } else {
+    row.playBtn.addEventListener("click", () => startRoundInTier(row.tier));
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Starting (or restarting) a round: pick a random player and reset everything.
@@ -262,7 +290,7 @@ function startNewRound() {
   roundOver = false;
 
   difficultyLabel.textContent =
-    "Difficulty: " + currentTierName[0].toUpperCase() + currentTierName.slice(1);
+    "Mode: " + currentTierName[0].toUpperCase() + currentTierName.slice(1);
 
   cycleMessage.textContent = justCompletedCycle
     ? `You've seen every player in this difficulty — starting over, repeats may happen now!`

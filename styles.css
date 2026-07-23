@@ -374,7 +374,6 @@ button {
    Give up (Career Paths). Targeted by ID so other buttons (e.g. "Hide and
    pass", "Reveal impostor(s)") keep their current look. */
 #start-game-btn,
-#start-round-btn,
 #new-round-btn,
 #give-up-btn {
   background: var(--accent);
@@ -383,7 +382,6 @@ button {
 }
 
 #start-game-btn:hover,
-#start-round-btn:hover,
 #new-round-btn:hover,
 #give-up-btn:hover {
   background: var(--accent-hover);
@@ -488,4 +486,94 @@ button {
 
 .reset-stats-btn:hover {
   background: var(--bg);
+}
+
+/* ---------------------------------------------------------------------
+   Career Paths mode-select menu (start screen) -- one row per mode,
+   styled like a menu card, each with its own "Play" button.
+--------------------------------------------------------------------- */
+
+.mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+}
+
+.mode-row-info {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.mode-row-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.mode-row-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.mode-row-desc.not-ready {
+  color: var(--red);
+  font-style: italic;
+}
+
+.mode-row-play-btn {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+.mode-row-play-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.mode-row-play-btn:disabled {
+  background: var(--border);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* On narrow phones, drop the Play button below the text instead of
+   squeezing everything onto one line. */
+@media (max-width: 420px) {
+  .mode-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mode-row-info {
+    /* Reset the flex-basis used for the side-by-side layout -- in a column
+       layout it would otherwise stretch to fill the row's height, leaving
+       a large gap above the button. */
+    flex: 0 0 auto;
+  }
+
+  .mode-row-play-btn {
+    width: 100%;
+  }
 }

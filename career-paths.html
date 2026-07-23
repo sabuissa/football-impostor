@@ -21,7 +21,7 @@
       <p class="subtitle">Guess the footballer from their club career!</p>
 
       <div class="rules-box">
-        <p>Pick a difficulty and we'll reveal a mystery player's first club.
+        <p>Pick a mode and we'll reveal a mystery player's first club.
           Guess who it is before you run out of tries!</p>
         <ul>
           <li>Type a name to search, then tap it in the list to lock in your guess.</li>
@@ -30,17 +30,42 @@
         </ul>
       </div>
 
-      <div class="field">
-        <label for="difficulty-select">Difficulty</label>
-        <select id="difficulty-select">
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-      </div>
+      <!-- One row per mode, each with its own "Play" button that starts a
+           round in that mode immediately -- see careerPaths.js for how rows
+           get disabled when a tier has no players yet. -->
+      <div class="mode-list">
+        <div class="mode-row">
+          <div class="mode-row-info">
+            <p class="mode-row-title">Easy</p>
+            <p class="mode-row-desc" id="mode-desc-easy">Well-known players with recognisable careers</p>
+          </div>
+          <button id="play-easy-btn" class="mode-row-play-btn">Play</button>
+        </div>
 
-      <button id="start-round-btn" class="primary-btn">Start round</button>
-      <p id="start-message" class="start-message"></p>
+        <div class="mode-row">
+          <div class="mode-row-info">
+            <p class="mode-row-title">Medium</p>
+            <p class="mode-row-desc" id="mode-desc-medium">A bit more thought required</p>
+          </div>
+          <button id="play-medium-btn" class="mode-row-play-btn">Play</button>
+        </div>
+
+        <div class="mode-row">
+          <div class="mode-row-info">
+            <p class="mode-row-title">Hard</p>
+            <p class="mode-row-desc" id="mode-desc-hard">For serious fans only</p>
+          </div>
+          <button id="play-hard-btn" class="mode-row-play-btn">Play</button>
+        </div>
+
+        <div class="mode-row">
+          <div class="mode-row-info">
+            <p class="mode-row-title">Random</p>
+            <p class="mode-row-desc" id="mode-desc-random">Any player, any difficulty</p>
+          </div>
+          <button id="play-random-btn" class="mode-row-play-btn">Play</button>
+        </div>
+      </div>
     </section>
 
     <!-- SCREEN 2: the guessing round itself -->
@@ -89,7 +114,7 @@
 
         <button id="give-up-btn" class="secondary-btn">Give up</button>
         <button id="new-round-btn" class="secondary-btn">New round</button>
-        <button id="change-difficulty-btn" class="secondary-btn">Change difficulty</button>
+        <button id="change-difficulty-btn" class="secondary-btn">Change mode</button>
 
         <button id="reset-stats-btn" class="reset-stats-btn">Reset stats</button>
       </div>
