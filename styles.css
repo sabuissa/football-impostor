@@ -54,6 +54,47 @@ h1 {
   display: none !important;
 }
 
+/* ---------------------------------------------------------------------
+   Screen transitions -- subtle fade-ins, purely visual (no logic here).
+   These rely on a trick that works reliably across browsers: a CSS
+   `animation` on an element automatically replays whenever that element
+   goes from `display: none` back to visible, so just attaching the
+   animation to classes that are already toggled via `.hidden` (see above)
+   is enough -- no JS changes needed for most of this.
+--------------------------------------------------------------------- */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes clubEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.screen {
+  animation: fadeIn 200ms ease-out;
+}
+
+/* Same trick applied to the specific panels that toggle via .hidden within
+   a screen (not the whole screen): the role reveal, the impostor/answer
+   reveal (shared class on both games), and the "tap to see your role"
+   prompt that reappears once per player's turn. Kept fast (200ms) since
+   speed matters more than polish for the role reveal specifically. */
+.role-display,
+.answer-display,
+#reveal-role-btn {
+  animation: fadeIn 200ms ease-out;
+}
+
+/* Only the most-recently-revealed club in the career list gets this class
+   (added in JS, see careerPaths.js) so earlier clubs don't replay the
+   animation every time a new one appears. */
+.career-list li.club-reveal {
+  animation: clubEnter 200ms ease-out;
+}
+
 .rules-box {
   background: var(--card-bg);
   border: 1px solid var(--border);
@@ -393,4 +434,58 @@ button {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
+}
+
+/* Respect the user's OS-level motion preference -- turn every animation
+   above into an instant, no-transition change. */
+@media (prefers-reduced-motion: reduce) {
+  .screen,
+  .role-display,
+  .answer-display,
+  #reveal-role-btn,
+  .career-list li.club-reveal {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Career Paths stats bar / streak tracking
+--------------------------------------------------------------------- */
+
+.stats-bar {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0 0 16px;
+}
+
+.stats-bar strong {
+  color: var(--accent);
+}
+
+.solved-in-text {
+  margin: 8px 0 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Deliberately small and out of the way -- not a main action, so it
+   shouldn't look like one. Overrides the generic `button` width:100% via
+   normal CSS cascade (same technique .primary-btn/.secondary-btn already use). */
+.reset-stats-btn {
+  display: block;
+  width: auto;
+  margin: 12px auto 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.reset-stats-btn:hover {
+  background: var(--bg);
 }

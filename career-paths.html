@@ -49,6 +49,16 @@
         <p id="difficulty-label" class="pass-prompt"></p>
         <p id="cycle-message" class="guesses-left"></p>
 
+        <!-- Small, unobtrusive stats bar -- see careerPaths.js for how the
+             numbers are tracked and persisted. -->
+        <p id="stats-bar" class="stats-bar">
+          &#128293; Streak: <strong id="current-streak-text">0</strong>
+          &nbsp;&middot;&nbsp;
+          &#127942; Best: <strong id="best-streak-text">0</strong>
+          &nbsp;&middot;&nbsp;
+          <span id="solve-rate-text">0/0 solved</span>
+        </p>
+
         <label class="photo-toggle-label">
           <input type="checkbox" id="show-photo-toggle" checked />
           Show photo
@@ -74,11 +84,14 @@
 
         <div id="answer-box" class="answer-display hidden">
           <p>The answer was: <strong id="answer-name"></strong></p>
+          <p id="solved-in-text" class="solved-in-text"></p>
         </div>
 
         <button id="give-up-btn" class="secondary-btn">Give up</button>
         <button id="new-round-btn" class="secondary-btn">New round</button>
         <button id="change-difficulty-btn" class="secondary-btn">Change difficulty</button>
+
+        <button id="reset-stats-btn" class="reset-stats-btn">Reset stats</button>
       </div>
     </section>
   </main>

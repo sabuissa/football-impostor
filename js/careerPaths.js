@@ -44,12 +44,18 @@ const guessDropdown = document.getElementById("guess-dropdown");
 const feedbackMessage = document.getElementById("feedback-message");
 const answerBox = document.getElementById("answer-box");
 const answerName = document.getElementById("answer-name");
+const solvedInText = document.getElementById("solved-in-text");
 const giveUpBtn = document.getElementById("give-up-btn");
 const newRoundBtn = document.getElementById("new-round-btn");
 const changeDifficultyBtn = document.getElementById("change-difficulty-btn");
+const resetStatsBtn = document.getElementById("reset-stats-btn");
+const currentStreakText = document.getElementById("current-streak-text");
+const bestStreakText = document.getElementById("best-streak-text");
+const solveRateText = document.getElementById("solve-rate-text");
 
 const STARTING_CLUB_COUNT = 1; // how many clubs are revealed right at the start
 const SEEN_PLAYERS_STORAGE_KEY = "careerPathsSeenPlayerIds";
+const STATS_STORAGE_KEY = "careerPathsStats";
 
 // The full search pool: data.js's big decoy list, plus every player name
 // from every difficulty tier (not just the one being played). Built once,
@@ -76,6 +82,22 @@ let roundOver = false; // true once the round has been won, lost, or given up
 
 let photoVisible = showPhotoToggle.checked; // the "Show photo" toggle preference
 let photoLoadFailed = false; // true if THIS round's photo URL failed to load
+
+// Streak / stats tracking. currentStreak resets each time the page loads
+// (it's a "how am I doing right now" number); bestStreak, roundsPlayed, and
+// roundsSolved are loaded from localStorage below and persist across visits.
+let currentStreak = 0;
+let bestStreak = 0;
+let roundsPlayed = 0;
+let roundsSolved = 0;
+
+{
+  const savedStats = loadStats();
+  bestStreak = savedStats.bestStreak;
+  roundsPlayed = savedStats.roundsPlayed;
+  roundsSolved = savedStats.roundsSolved;
+  updateStatsBar();
+}
 
 // Whether the photo is actually shown depends on two independent things:
 // the user's toggle preference, and whether the image URL even worked.
@@ -137,6 +159,45 @@ function saveSeenPlayerIds(seenPlayerIds) {
     localStorage.setItem(SEEN_PLAYERS_STORAGE_KEY, JSON.stringify(seenPlayerIds));
   } catch {
     // Ignore -- worst case, repeats aren't remembered this session.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stats storage -- best streak and totals persist in localStorage. Every
+// read/write is wrapped in try/catch: if storage is unavailable or blocked
+// (e.g. private browsing), the game keeps working with in-memory stats only
+// instead of crashing or showing an error.
+// ---------------------------------------------------------------------------
+
+// Only accept a value from storage if it's actually a usable number --
+// anything missing, corrupted, or the wrong type falls back to 0 rather
+// than being trusted.
+function toSafeNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      bestStreak: toSafeNumber(parsed.bestStreak),
+      roundsPlayed: toSafeNumber(parsed.roundsPlayed),
+      roundsSolved: toSafeNumber(parsed.roundsSolved),
+    };
+  } catch {
+    return { bestStreak: 0, roundsPlayed: 0, roundsSolved: 0 };
+  }
+}
+
+function saveStats() {
+  try {
+    localStorage.setItem(
+      STATS_STORAGE_KEY,
+      JSON.stringify({ bestStreak, roundsPlayed, roundsSolved })
+    );
+  } catch {
+    // Ignore -- worst case, stats just don't persist this session.
   }
 }
 
@@ -245,7 +306,7 @@ function updateCareerList() {
   careerList.innerHTML = "";
 
   const clubsToShow = currentPlayer.career.slice(0, revealedClubCount);
-  for (const stint of clubsToShow) {
+  clubsToShow.forEach((stint, index) => {
     // A single-year stint (e.g. a short loan spell) shows just "2024"
     // instead of the redundant "2024–2024".
     const years =
@@ -255,8 +316,13 @@ function updateCareerList() {
 
     const item = document.createElement("li");
     item.textContent = `${stint.club} (${years})`;
+    // Only the newest club gets the "just revealed" animation (see
+    // styles.css) -- purely visual, doesn't affect which clubs are shown.
+    if (index === clubsToShow.length - 1) {
+      item.classList.add("club-reveal");
+    }
     careerList.appendChild(item);
-  }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -335,7 +401,7 @@ function submitGuess(guessedName) {
 
   if (isCorrect) {
     feedbackMessage.textContent = "Correct! \u{1F389}";
-    endRound();
+    endRound(true);
     return;
   }
 
@@ -351,7 +417,7 @@ function submitGuess(guessedName) {
 
   if (guessesUsed >= maxGuesses) {
     feedbackMessage.textContent = `Out of guesses! It was ${currentPlayer.name}.`;
-    endRound();
+    endRound(false);
   } else if (isFullyRevealed && isLastGuessRemaining) {
     // The whole career is visible and this was their second-to-last guess --
     // warn them the next one is do-or-die.
@@ -364,15 +430,58 @@ function submitGuess(guessedName) {
 giveUpBtn.addEventListener("click", () => {
   if (roundOver) return;
   feedbackMessage.textContent = `Gave up. It was ${currentPlayer.name}.`;
-  endRound();
+  endRound(false);
+});
+
+// ---------------------------------------------------------------------------
+// Stats: streak + rounds played/solved, and rendering them to the stats bar.
+// ---------------------------------------------------------------------------
+
+function updateStatsBar() {
+  currentStreakText.textContent = String(currentStreak);
+  bestStreakText.textContent = String(bestStreak);
+  solveRateText.textContent = `${roundsSolved}/${roundsPlayed} solved`;
+}
+
+function recordRoundResult(wasSolved) {
+  roundsPlayed++;
+
+  if (wasSolved) {
+    roundsSolved++;
+    currentStreak++;
+    bestStreak = Math.max(bestStreak, currentStreak);
+  } else {
+    currentStreak = 0;
+  }
+
+  saveStats();
+  updateStatsBar();
+}
+
+resetStatsBtn.addEventListener("click", () => {
+  const confirmed = window.confirm("Reset your streak and stats? This can't be undone.");
+  if (!confirmed) return;
+
+  currentStreak = 0;
+  bestStreak = 0;
+  roundsPlayed = 0;
+  roundsSolved = 0;
+  saveStats();
+  updateStatsBar();
 });
 
 // ---------------------------------------------------------------------------
 // Ending a round (win, loss, or give up): reveal the photo, name, and the
-// player's FULL career path.
+// player's FULL career path. `wasSolved` is true only for a correct guess --
+// this is the ONE place a round's result gets recorded into the stats, and
+// it only ever runs once per round (submitGuess/giveUpBtn both bail out
+// early via the `roundOver` check above once a round has ended), so a round
+// can never be double-counted. Abandoning a round early with "New round" or
+// "Change difficulty" never calls this function at all, so it correctly
+// doesn't count as a win or a loss.
 // ---------------------------------------------------------------------------
 
-function endRound() {
+function endRound(wasSolved) {
   roundOver = true;
   guessInput.disabled = true;
   hideDropdown();
@@ -385,4 +494,12 @@ function endRound() {
 
   answerName.textContent = currentPlayer.name;
   answerBox.classList.remove("hidden");
+
+  // guessesUsed only counts WRONG guesses, so the winning guess itself adds 1.
+  const totalGuesses = guessesUsed + 1;
+  solvedInText.textContent = wasSolved
+    ? `Solved in ${totalGuesses} guess${totalGuesses === 1 ? "" : "es"}!`
+    : "";
+
+  recordRoundResult(wasSolved);
 }
